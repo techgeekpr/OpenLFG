@@ -75,6 +75,8 @@ end
 
 function A.UI_RefreshDungeons()
     if not frame or not frame:IsShown() then return end
+    if A._busyD then return end                        -- guard against scroll re-entrancy
+    A._busyD = true
     local order = A.DUNGEON_ORDER
     local total = A.tlen(order)
     _G.FauxScrollFrame_Update(dScroll, total, DROWS, DROW_H)
@@ -99,6 +101,7 @@ function A.UI_RefreshDungeons()
             row:Hide()
         end
     end
+    A._busyD = false
 end
 
 -- ---------------------------------------------------------------------------
@@ -171,6 +174,8 @@ end
 function A.UI_Refresh()
     A.UI_RefreshDungeons()
     if not frame or not frame:IsShown() then return end
+    if A._busyP then return end                        -- guard against scroll re-entrancy
+    A._busyP = true
     local list  = A.GetSortedEntries(filterBox and filterBox:GetText() or nil)
     local total = A.tlen(list)
 
@@ -243,6 +248,7 @@ function A.UI_Refresh()
             frame.update:SetText("")
         end
     end
+    A._busyP = false
 end
 
 -- ---------------------------------------------------------------------------
@@ -297,8 +303,10 @@ local function build()
         cb:SetChecked(A.db.selfRoles and A.db.selfRoles[r] or false)
         cb:SetScript("OnClick", function(self)
             local b = self or _G.this
+            local role = b and b.role                 -- read from the button, NOT the
+            if not role then return end               -- loop var (nil on Lua 5.0 / 1.12)
             A.db.selfRoles = A.db.selfRoles or {}
-            if b:GetChecked() then A.db.selfRoles[r] = true else A.db.selfRoles[r] = nil end
+            if b:GetChecked() then A.db.selfRoles[role] = true else A.db.selfRoles[role] = nil end
         end)
         local lbl = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
         lbl:SetPoint("LEFT", cb, "RIGHT", 2, 0)
@@ -316,9 +324,10 @@ local function build()
     dScroll = _G.CreateFrame("ScrollFrame", "OpenLFGDScroll", frame, "FauxScrollFrameTemplate")
     dScroll:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -96)
     dScroll:SetWidth(LEFT_W - 30); dScroll:SetHeight(DROWS * DROW_H)
-    dScroll:SetScript("OnVerticalScroll", function(self, offset)
-        if A.isModern then _G.FauxScrollFrame_OnVerticalScroll(self, offset, DROW_H, A.UI_RefreshDungeons)
-        else _G.FauxScrollFrame_OnVerticalScroll(_G.arg1, DROW_H, A.UI_RefreshDungeons) end
+    dScroll:SetScript("OnVerticalScroll", function()
+        -- Bypass FauxScrollFrame_OnVerticalScroll (its arg order differs between
+        -- clients). The scrollbar value is already current; just re-render.
+        A.UI_RefreshDungeons()
     end)
     dRows = {}
     for i = 1, DROWS do dRows[i] = makeDungeonRow(frame, i) end
@@ -387,9 +396,8 @@ local function build()
     pScroll = _G.CreateFrame("ScrollFrame", "OpenLFGPScroll", frame, "FauxScrollFrameTemplate")
     pScroll:SetPoint("TOPLEFT", frame, "TOPLEFT", LEFT_W + 12, -88)
     pScroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, 36)
-    pScroll:SetScript("OnVerticalScroll", function(self, offset)
-        if A.isModern then _G.FauxScrollFrame_OnVerticalScroll(self, offset, PROW_H, A.UI_Refresh)
-        else _G.FauxScrollFrame_OnVerticalScroll(_G.arg1, PROW_H, A.UI_Refresh) end
+    pScroll:SetScript("OnVerticalScroll", function()
+        A.UI_Refresh()
     end)
     pRows = {}
     for i = 1, PROWS do pRows[i] = makePlayerRow(frame, i) end

@@ -13,7 +13,7 @@ A._G = _G
 -- Client detection: C_Timer only exists on the modern (1.14) client.
 A.isModern  = (_G.C_Timer ~= nil)
 A.isVanilla = not A.isModern
-A.version   = "1.1"
+A.version   = "1.2"
 
 -- "1.10.2" -> a single comparable integer.
 function A.VersionNum(v)
