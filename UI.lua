@@ -7,10 +7,10 @@
 local A = OpenLFG
 local _G = A._G
 
-local FRAME_W, FRAME_H = 660, 470
+local FRAME_W, FRAME_H = 660, 520
 local LEFT_W           = 236
 local DROW_H, DROWS    = 18, 15    -- dungeon list
-local PROW_H, PROWS    = 22, 13    -- player list
+local PROW_H, PROWS    = 30, 13    -- player list (2 lines per row, needs height)
 
 local frame, dScroll, pScroll, dRows, pRows, filterBox, roleChecks
 
@@ -132,12 +132,18 @@ local function makePlayerRow(parent, i)
     r.name:SetPoint("LEFT", r.tag, "RIGHT", 2, 0); r.name:SetWidth(122); r.name:SetJustifyH("LEFT")
 
     r.roles = r:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    r.roles:SetPoint("LEFT", r.name, "RIGHT", 4, 0); r.roles:SetWidth(118); r.roles:SetJustifyH("LEFT")
+    r.roles:SetPoint("LEFT", r.name, "RIGHT", 4, 0)
+    r.roles:SetPoint("RIGHT", r.age, "LEFT", -8, 0); r.roles:SetJustifyH("LEFT")   -- stop before age
 
     -- second line: dungeons (colored) + free-text note, as one string
     r.line2 = r:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     r.line2:SetPoint("TOPLEFT", r.name, "BOTTOMLEFT", 0, 1)
-    r.line2:SetPoint("RIGHT", r, "RIGHT", -4, 0); r.line2:SetJustifyH("LEFT")
+    r.line2:SetPoint("RIGHT", r.age, "LEFT", -8, 0); r.line2:SetJustifyH("LEFT")   -- stop before age/Inv
+    -- Keep everything on one line. SetWordWrap exists only on the modern client;
+    -- on 1.12 we additionally cap the text length in UI_Refresh so it can't wrap.
+    if r.line2.SetWordWrap then r.line2:SetWordWrap(false) end
+    if r.roles.SetWordWrap then r.roles:SetWordWrap(false) end
+    if r.name.SetWordWrap then r.name:SetWordWrap(false) end
     r.inv:SetScript("OnClick", function() if r.entryName then A.Invite(r.entryName) end end)
 
     r:SetScript("OnClick", function() if r.entryName then A.Whisper(r.entryName) end end)
@@ -175,20 +181,33 @@ function A.UI_Refresh()
             else r.tag:SetText("|cff33ccffLFG|r") end
             r.name:SetText("|cff" .. hex .. nm .. "|r")
             r.roles:SetText(roleBadges(e.roles))
-            -- second line: [count] dungeons (source-tinted) then note in grey
+            -- second line: [count] dungeons (source-tinted) then note in grey.
+            -- Cap the PLAIN text to a char budget before adding color codes, so it
+            -- never wraps to a second visual line (which would overlap the next row).
             local dcolor = "ffd200"                         -- chat = gold
             if e.source == "sync" then dcolor = "8ccfff"    -- synced = blue
             elseif e.source == "self" then dcolor = "66ff66" end -- you = green
+
+            local prefix = ""
+            if e.count and e.count ~= "" then prefix = "(" .. e.count .. ") " end
+            local dpart = e.dungeons or ""
+            local npart = e.note or ""
+
+            local budget = 52 - _G.string.len(prefix)
+            if _G.string.len(dpart) > budget then dpart = _G.string.sub(dpart, 1, budget) end
+            local rem = budget - _G.string.len(dpart)
+            if dpart ~= "" and npart ~= "" then rem = rem - 2 end
+            if rem < 0 then rem = 0 end
+            if _G.string.len(npart) > rem then
+                if rem > 3 then npart = _G.string.sub(npart, 1, rem - 3) .. "..." else npart = "" end
+            end
+
             local line2 = ""
-            if e.count and e.count ~= "" then
-                line2 = "|cffffcc33(" .. e.count .. ")|r "
-            end
-            if e.dungeons and e.dungeons ~= "" then
-                line2 = line2 .. "|cff" .. dcolor .. e.dungeons .. "|r"
-            end
-            if e.note and e.note ~= "" then
-                if line2 ~= "" then line2 = line2 .. "  " end
-                line2 = line2 .. "|cff9d9d9d" .. e.note .. "|r"
+            if prefix ~= "" then line2 = "|cffffcc33" .. prefix .. "|r" end
+            if dpart ~= "" then line2 = line2 .. "|cff" .. dcolor .. dpart .. "|r" end
+            if npart ~= "" then
+                if dpart ~= "" or prefix ~= "" then line2 = line2 .. " " end
+                line2 = line2 .. "|cff9d9d9d" .. npart .. "|r"
             end
             r.line2:SetText(line2)
             r.age:SetText(ageText(math.floor(A.now() - (e.lastSeen or A.now()))))
@@ -202,6 +221,14 @@ function A.UI_Refresh()
         end
     end
     if frame.count then frame.count:SetText(total .. " listed") end
+    if frame.update then
+        if A.newestSeen then
+            frame.update:SetText("|cffff4444Update available: v" .. A.newestSeen
+                .. " (you have v" .. A.version .. ") - github.com/techgeekpr/OpenLFG|r")
+        else
+            frame.update:SetText("")
+        end
+    end
 end
 
 -- ---------------------------------------------------------------------------
@@ -225,6 +252,11 @@ local function build()
     local title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOP", frame, "TOP", 0, -14)
     title:SetText("OpenLFG  -  Looking For Group")
+
+    -- "update available" badge under the title (shown only when out of date)
+    frame.update = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    frame.update:SetPoint("TOP", title, "BOTTOM", 0, -1)
+    frame.update:SetText("")
 
     local close = _G.CreateFrame("Button", nil, frame, "UIPanelCloseButton")
     close:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -6, -6)

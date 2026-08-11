@@ -193,6 +193,25 @@ function A.ClearSelf()
 end
 
 -- ---------------------------------------------------------------------------
+-- Update check (peer-to-peer: addons broadcast their version over sync)
+-- ---------------------------------------------------------------------------
+function A.OnPeerVersion(remoteVer)
+    if not remoteVer or remoteVer == "" then return end
+    if A.VersionNum(remoteVer) <= A.VersionNum(A.version) then return end
+    -- remember the newest we've seen (for the UI badge)
+    if not A.newestSeen or A.VersionNum(remoteVer) > A.VersionNum(A.newestSeen) then
+        A.newestSeen = remoteVer
+    end
+    if not A.warnedOutOfDate then
+        A.warnedOutOfDate = true
+        A.print("|cffff4444A newer version is available!|r You have v" .. A.version
+                .. ", latest seen is v" .. remoteVer .. ".")
+        A.print("Update at |cff88ccffgithub.com/techgeekpr/OpenLFG|r")
+    end
+    if A.UI_Refresh then A.UI_Refresh() end
+end
+
+-- ---------------------------------------------------------------------------
 -- Slash commands
 -- ---------------------------------------------------------------------------
 local function handleSlash(msg)

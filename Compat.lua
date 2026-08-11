@@ -13,7 +13,19 @@ A._G = _G
 -- Client detection: C_Timer only exists on the modern (1.14) client.
 A.isModern  = (_G.C_Timer ~= nil)
 A.isVanilla = not A.isModern
-A.version   = "1.0"
+A.version   = "1.1"
+
+-- "1.10.2" -> a single comparable integer.
+function A.VersionNum(v)
+    local nums = { 0, 0, 0 }
+    local i = 1
+    for n in (A.gmatch or _G.string.gmatch or _G.string.gfind)(v or "", "%d+") do
+        nums[i] = tonumber(n) or 0
+        i = i + 1
+        if i > 3 then break end
+    end
+    return nums[1] * 10000 + nums[2] * 100 + nums[3]
+end
 
 -- ---------------------------------------------------------------------------
 -- String helpers

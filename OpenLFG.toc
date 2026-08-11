@@ -2,7 +2,7 @@
 ## Title: OpenLFG
 ## Notes: Server-wide LFG board - scans world chat and syncs between addon users
 ## Author: (you)
-## Version: 1.0
+## Version: 1.1
 ## SavedVariables: OpenLFGDB
 
 Compat.lua

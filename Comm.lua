@@ -6,6 +6,7 @@
        OLFG1|ADD|name|level|class|dungeonKeysCSV|roles|kind|count|note|ageSeconds
        OLFG1|REM|name
        OLFG1|REQ                (new login asking peers for their self-entry)
+       OLFG1|VER|versionString  (addon version, for the out-of-date check)
 
      Only your OWN entry is broadcast (self-announce + reply to REQ), so there
      are no rebroadcast storms. Scanned world-chat entries stay local -- every
@@ -65,6 +66,10 @@ local function requestBoard()
     enqueue(PREFIX .. SEP .. "REQ")
 end
 
+function A.Comm_BroadcastVersion()
+    enqueue(PREFIX .. SEP .. "VER" .. SEP .. esc(A.version))
+end
+
 -- ---- incoming --------------------------------------------------------------
 local lastReqReply = 0
 function A.Comm_OnMessage(text, sender)
@@ -87,6 +92,9 @@ function A.Comm_OnMessage(text, sender)
             note = parts[10], source = "sync",
         })
 
+    elseif kind == "VER" then
+        if A.OnPeerVersion then A.OnPeerVersion(parts[3]) end
+
     elseif kind == "REM" then
         local name = A.ShortName(parts[3])
         if name and name ~= _G.UnitName("player") then A.RemoveEntry(name) end
@@ -95,11 +103,12 @@ function A.Comm_OnMessage(text, sender)
         -- Reply with our own self-entry, if any, after a small random-ish delay
         -- (spread by name length so peers don't all answer on the same tick).
         local myName = _G.UnitName("player")
-        if A.board[myName] and A.board[myName].source == "self" then
-            local now = A.now()
-            if now - lastReqReply > 5 then
-                lastReqReply = now
-                local jitter = 1 + A.mod(_G.string.len(myName), 4)
+        local now = A.now()
+        if now - lastReqReply > 5 then
+            lastReqReply = now
+            local jitter = 1 + A.mod(_G.string.len(myName), 4)
+            A.After(jitter, A.Comm_BroadcastVersion)   -- help new logins detect updates
+            if A.board[myName] and A.board[myName].source == "self" then
                 A.After(jitter, A.Comm_BroadcastSelf)
             end
         end
@@ -120,8 +129,10 @@ function A.Comm_Start()
     started = true
     if ensureJoined() then
         requestBoard()
-        -- refresh our own entry to peers every 4 min so late joiners keep it
+        A.After(3, A.Comm_BroadcastVersion)   -- announce our version on login
+        -- refresh our own entry + version to peers every 4 min
         A.NewTicker(240, function()
+            A.Comm_BroadcastVersion()
             local myName = _G.UnitName("player")
             if A.board[myName] and A.board[myName].source == "self" then
                 A.Comm_BroadcastSelf()
