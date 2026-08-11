@@ -116,13 +116,13 @@ local function makePlayerRow(parent, i)
     if hl.SetBlendMode then hl:SetBlendMode("ADD") end
     hl:SetAlpha(0.3)
 
-    -- top-right: Inv button + age
-    r.inv = _G.CreateFrame("Button", nil, r, "UIPanelButtonTemplate")
-    r.inv:SetWidth(30); r.inv:SetHeight(18); r.inv:SetPoint("RIGHT", r, "RIGHT", 0, 0)
-    r.inv:SetText("Inv")
+    -- top-right: action button (Invite for solo LFG, Whisper for group LFM) + age
+    r.act = _G.CreateFrame("Button", nil, r, "UIPanelButtonTemplate")
+    r.act:SetWidth(56); r.act:SetHeight(18); r.act:SetPoint("RIGHT", r, "RIGHT", 0, 0)
+    r.act:SetText("Inv")
 
     r.age = r:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-    r.age:SetPoint("RIGHT", r.inv, "LEFT", -6, 0); r.age:SetWidth(34); r.age:SetJustifyH("RIGHT")
+    r.age:SetPoint("RIGHT", r.act, "LEFT", -6, 0); r.age:SetWidth(34); r.age:SetJustifyH("RIGHT")
 
     -- top-left line: LFG/LFM tag + name + roles
     r.tag = r:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
@@ -144,7 +144,11 @@ local function makePlayerRow(parent, i)
     if r.line2.SetWordWrap then r.line2:SetWordWrap(false) end
     if r.roles.SetWordWrap then r.roles:SetWordWrap(false) end
     if r.name.SetWordWrap then r.name:SetWordWrap(false) end
-    r.inv:SetScript("OnClick", function() if r.entryName then A.Invite(r.entryName) end end)
+    -- Group (LFM) -> whisper the leader to get in; solo (LFG) -> invite them.
+    r.act:SetScript("OnClick", function()
+        if not r.entryName then return end
+        if r.isGroup then A.Whisper(r.entryName) else A.Invite(r.entryName) end
+    end)
 
     r:SetScript("OnClick", function() if r.entryName then A.Whisper(r.entryName) end end)
     r:SetScript("OnEnter", function()
@@ -153,7 +157,11 @@ local function makePlayerRow(parent, i)
         _G.GameTooltip:AddLine(r.entryName)
         if r.fullDung and r.fullDung ~= "" then _G.GameTooltip:AddLine(r.fullDung, 0.8, 0.8, 1, true) end
         if r.fullNote then _G.GameTooltip:AddLine(r.fullNote, 1, 1, 1, true) end
-        _G.GameTooltip:AddLine("Left-click: whisper   Inv: invite", 0.6, 0.6, 0.6)
+        if r.isGroup then
+            _G.GameTooltip:AddLine("Group (LFM) - whisper to ask for an invite", 0.6, 0.6, 0.6)
+        else
+            _G.GameTooltip:AddLine("Solo (LFG) - invite them to your group", 0.6, 0.6, 0.6)
+        end
         _G.GameTooltip:Show()
     end)
     r:SetScript("OnLeave", function() _G.GameTooltip:Hide() end)
@@ -177,8 +185,14 @@ function A.UI_Refresh()
             local nm  = e.name
             if e.level then nm = nm .. " (" .. e.level .. ")" end
             -- LFG (solo, teal) vs LFM (group, gold)
-            if e.kind == "group" then r.tag:SetText("|cffffcc33LFM|r")
-            else r.tag:SetText("|cff33ccffLFG|r") end
+            r.isGroup = (e.kind == "group")
+            if r.isGroup then
+                r.tag:SetText("|cffffcc33LFM|r")
+                r.act:SetText("Whisper")
+            else
+                r.tag:SetText("|cff33ccffLFG|r")
+                r.act:SetText("Inv")
+            end
             r.name:SetText("|cff" .. hex .. nm .. "|r")
             r.roles:SetText(roleBadges(e.roles))
             -- second line: [count] dungeons (source-tinted) then note in grey.
