@@ -5,42 +5,43 @@
 local A = OpenLFG
 local _G = A._G
 
--- key -> { name, min, max, raid }
+-- key -> { name, abbr (short label for World chat), min, max, raid }
 A.DUNGEON_INFO = {
-    RFC  = { name = "Ragefire Chasm",        min = 13, max = 18 },
-    WC   = { name = "Wailing Caverns",       min = 17, max = 24 },
-    VC   = { name = "The Deadmines",         min = 17, max = 26 },
-    SFK  = { name = "Shadowfang Keep",       min = 22, max = 30 },
-    BFD  = { name = "Blackfathom Deeps",     min = 24, max = 32 },
-    STK  = { name = "The Stockade",          min = 24, max = 32 },
-    GNO  = { name = "Gnomeregan",            min = 29, max = 38 },
-    RFK  = { name = "Razorfen Kraul",        min = 30, max = 40 },
-    SM   = { name = "Scarlet Monastery",     min = 28, max = 45 },
-    RFD  = { name = "Razorfen Downs",        min = 36, max = 46 },
-    ULD  = { name = "Uldaman",               min = 42, max = 52 },
-    ZF   = { name = "Zul'Farrak",            min = 44, max = 54 },
-    MARA = { name = "Maraudon",              min = 46, max = 55 },
-    ST   = { name = "Sunken Temple",         min = 50, max = 60 },
-    BRD  = { name = "Blackrock Depths",      min = 52, max = 60 },
-    DM   = { name = "Dire Maul",             min = 55, max = 60 },
-    LBRS = { name = "Lower Blackrock Spire", min = 55, max = 60 },
-    UBRS = { name = "Upper Blackrock Spire", min = 58, max = 60 },
-    STRT = { name = "Stratholme",            min = 58, max = 60 },
-    SCHO = { name = "Scholomance",           min = 58, max = 60 },
+    RFC  = { name = "Ragefire Chasm",        abbr = "RFC",        min = 13, max = 18 },
+    WC   = { name = "Wailing Caverns",       abbr = "WC",         min = 17, max = 24 },
+    VC   = { name = "The Deadmines",         abbr = "VC",         min = 17, max = 26 },
+    SFK  = { name = "Shadowfang Keep",       abbr = "SFK",        min = 22, max = 30 },
+    BFD  = { name = "Blackfathom Deeps",     abbr = "BFD",        min = 24, max = 32 },
+    STK  = { name = "The Stockade",          abbr = "Stockade",   min = 24, max = 32 },
+    GNO  = { name = "Gnomeregan",            abbr = "Gnomer",     min = 29, max = 38 },
+    RFK  = { name = "Razorfen Kraul",        abbr = "RFK",        min = 30, max = 40 },
+    SM   = { name = "Scarlet Monastery",     abbr = "SM",         min = 28, max = 45 },
+    RFD  = { name = "Razorfen Downs",        abbr = "RFD",        min = 36, max = 46 },
+    ULD  = { name = "Uldaman",               abbr = "Uld",        min = 42, max = 52 },
+    ZF   = { name = "Zul'Farrak",            abbr = "ZF",         min = 44, max = 54 },
+    MARA = { name = "Maraudon",              abbr = "Mara",       min = 46, max = 55 },
+    ST   = { name = "Sunken Temple",         abbr = "ST",         min = 50, max = 60 },
+    BRD  = { name = "Blackrock Depths",      abbr = "BRD",        min = 52, max = 60 },
+    DM   = { name = "Dire Maul",             abbr = "DM",         min = 55, max = 60 },
+    LBRS = { name = "Lower Blackrock Spire", abbr = "LBRS",       min = 55, max = 60 },
+    UBRS = { name = "Upper Blackrock Spire", abbr = "UBRS",       min = 58, max = 60 },
+    STRATUD   = { name = "Stratholme (Undead)", abbr = "Strat UD",   min = 58, max = 60 },
+    STRATLIVE = { name = "Stratholme (Live)",   abbr = "Strat Live", min = 58, max = 60 },
+    SCHO = { name = "Scholomance",           abbr = "Scholo",     min = 58, max = 60 },
     -- raids
-    MC   = { name = "Molten Core",           min = 60, max = 60, raid = true },
-    ONY  = { name = "Onyxia",                min = 60, max = 60, raid = true },
-    BWL  = { name = "Blackwing Lair",        min = 60, max = 60, raid = true },
-    ZG   = { name = "Zul'Gurub",             min = 60, max = 60, raid = true },
-    AQ20 = { name = "Ruins of AQ (20)",      min = 60, max = 60, raid = true },
-    AQ40 = { name = "Temple of AQ (40)",     min = 60, max = 60, raid = true },
-    NAXX = { name = "Naxxramas",             min = 60, max = 60, raid = true },
+    MC   = { name = "Molten Core",           abbr = "MC",   min = 60, max = 60, raid = true },
+    ONY  = { name = "Onyxia",                abbr = "Ony",  min = 60, max = 60, raid = true },
+    BWL  = { name = "Blackwing Lair",        abbr = "BWL",  min = 60, max = 60, raid = true },
+    ZG   = { name = "Zul'Gurub",             abbr = "ZG",   min = 60, max = 60, raid = true },
+    AQ20 = { name = "Ruins of AQ (20)",      abbr = "AQ20", min = 60, max = 60, raid = true },
+    AQ40 = { name = "Temple of AQ (40)",     abbr = "AQ40", min = 60, max = 60, raid = true },
+    NAXX = { name = "Naxxramas",             abbr = "Naxx", min = 60, max = 60, raid = true },
 }
 
 -- Display order (level ascending, raids last).
 A.DUNGEON_ORDER = {
     "RFC","WC","VC","SFK","BFD","STK","GNO","RFK","SM","RFD","ULD","ZF","MARA",
-    "ST","BRD","DM","LBRS","UBRS","STRT","SCHO",
+    "ST","BRD","DM","LBRS","UBRS","STRATUD","STRATLIVE","SCHO",
     "MC","ONY","BWL","ZG","AQ20","AQ40","NAXX",
 }
 
@@ -63,7 +64,8 @@ A.DUNGEON_TOKENS = {
     brd="BRD", depths="BRD",
     dire="DM", diremaul="DM", dmt="DM", dme="DM", dmw="DM", dmn="DM",
     lbrs="LBRS", ubrs="UBRS", spire="LBRS",
-    strat="STRT", stratholme="STRT",
+    strat="STRATUD", stratholme="STRATUD", stratud="STRATUD", baron="STRATUD",
+    stratlive="STRATLIVE", living="STRATLIVE", crusader="STRATLIVE",
     scholo="SCHO", scholomance="SCHO",
     mc="MC", molten="MC", moltencore="MC",
     ony="ONY", onyxia="ONY",
@@ -107,6 +109,25 @@ function A.KeysToNames(keys, useShort)
     for _, k in ipairs(A.DUNGEON_ORDER) do
         if set[k] then
             _G.table.insert(out, useShort and k or A.KeyName(k))
+        end
+    end
+    return _G.table.concat(out, ", ")
+end
+
+-- Comma-joined SHORT abbreviations (for the World-chat message).
+function A.KeysToAbbr(keys)
+    if not keys then return "" end
+    local set = {}
+    if keys[1] ~= nil then
+        for _, k in ipairs(keys) do set[k] = true end
+    else
+        set = keys
+    end
+    local out = {}
+    for _, k in ipairs(A.DUNGEON_ORDER) do
+        if set[k] then
+            local info = A.DUNGEON_INFO[k]
+            _G.table.insert(out, (info and info.abbr) or k)
         end
     end
     return _G.table.concat(out, ", ")

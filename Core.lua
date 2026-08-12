@@ -127,7 +127,8 @@ end
 -- Self announcement
 -- ---------------------------------------------------------------------------
 -- roleSet / dungeonSet are optional; default to the saved UI selection.
-function A.AnnounceSelf(note, dungeonSet, roleSet)
+-- forceWorld = also post to the World channel regardless of the config toggle.
+function A.AnnounceSelf(note, dungeonSet, roleSet, forceWorld)
     local name  = _G.UnitName("player")
     local level = _G.UnitLevel("player")
     local _, class = _G.UnitClass("player")
@@ -160,28 +161,25 @@ function A.AnnounceSelf(note, dungeonSet, roleSet)
                  kind = kind, count = count, source = "self" })
 
     if A.db.sync and A.Comm_BroadcastSelf then A.Comm_BroadcastSelf() end
-    if A.db.announceToWorld then
-        A.SendToChannel(A.db.worldChannel, A.ComposeWorldMessage(note, dungeonSet, roleStr))
+    if forceWorld or A.db.announceToWorld then
+        local ok = A.SendToChannel(A.db.worldChannel, A.ComposeWorldMessage(note, dungeonSet, roleStr))
+        if not ok then
+            A.print("|cffff8800Couldn't post to the '" .. A.db.worldChannel .. "' channel|r - join it (/join "
+                    .. A.db.worldChannel .. ") or set the right one with /lfg worldchannel <name>")
+        end
     end
     A.print("Listed as LFG for: |cffffffff" .. (A.KeysToNames(dungeonSet) ~= "" and A.KeysToNames(dungeonSet) or "(any)")
             .. "|r" .. (roleStr ~= "" and " [" .. roleStr .. "]" or ""))
 end
 
--- Human-readable line for posting to the public World channel.
+-- World-chat line:  "<Class> LFG <BRD, LBRS, Strat> <note>"
 function A.ComposeWorldMessage(note, dungeonSet, roleStr)
-    local parts = { "LFG" }
-    local dn = A.KeysToNames(dungeonSet, true)   -- short codes for brevity
-    if dn ~= "" then _G.table.insert(parts, dn) end
-    if roleStr and roleStr ~= "" then
-        local rlabels = {}
-        for i = 1, _G.string.len(roleStr) do
-            _G.table.insert(rlabels, A.ROLE_NAME[_G.string.sub(roleStr, i, i)])
-        end
-        _G.table.insert(parts, "(" .. _G.table.concat(rlabels, "/") .. ")")
-    end
-    local base = _G.table.concat(parts, " ")
-    if note and note ~= "" then base = base .. " - " .. note end
-    return base
+    local className = (_G.UnitClass and _G.UnitClass("player")) or ""
+    local abbrs = A.KeysToAbbr(dungeonSet)
+    local msg = className .. " LFG"
+    if abbrs ~= "" then msg = msg .. " " .. abbrs end
+    if note and note ~= "" then msg = msg .. " " .. note end
+    return msg
 end
 
 function A.ClearSelf()
@@ -233,6 +231,13 @@ local function handleSlash(msg)
     elseif cmd == "sync" then
         A.db.sync = not A.db.sync
         A.print("Sync " .. (A.db.sync and "ENABLED" or "DISABLED") .. " (reload to apply channel join).")
+    elseif cmd == "worldchannel" then
+        if rest and rest ~= "" then
+            A.db.worldChannel = A.trim(rest)
+            A.print("World channel set to: |cffffffff" .. A.db.worldChannel .. "|r")
+        else
+            A.print("World channel is '" .. (A.db.worldChannel or "World") .. "'. Usage: /lfg worldchannel <name>")
+        end
     elseif cmd == "lifetime" then
         local n = tonumber(rest)
         if n and n >= 60 and n <= 3600 then

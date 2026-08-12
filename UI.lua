@@ -404,7 +404,7 @@ local function build()
     noteBox:SetScript("OnEnterPressed", function(self)
         local eb = self or _G.this
         A.db.selfNote = eb:GetText()
-        A.AnnounceSelf(A.db.selfNote)
+        A.AnnounceSelf(A.db.selfNote, nil, nil, true)   -- Enter in the note = Set LFG (posts to World)
         eb:ClearFocus()
     end)
     noteBox:SetScript("OnEscapePressed", function(self) (self or _G.this):ClearFocus() end)
@@ -415,7 +415,8 @@ local function build()
     setBtn:SetWidth(96); setBtn:SetHeight(20)
     setBtn:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 16, 14)
     setBtn:SetText("Set LFG")
-    setBtn:SetScript("OnClick", function() A.AnnounceSelf(A.db.selfNote) end)
+    -- Set LFG always posts to World: "<Class> LFG <codes> <note>"
+    setBtn:SetScript("OnClick", function() A.AnnounceSelf(A.db.selfNote, nil, nil, true) end)
 
     local clrBtn = _G.CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
     clrBtn:SetWidth(96); clrBtn:SetHeight(20)
