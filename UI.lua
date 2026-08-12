@@ -79,8 +79,7 @@ function A.UI_RefreshDungeons()
     A._busyD = true
     local order = A.DUNGEON_ORDER
     local total = A.tlen(order)
-    _G.FauxScrollFrame_Update(dScroll, total, DROWS, DROW_H)
-    local offset = _G.FauxScrollFrame_GetOffset(dScroll)
+    local offset = A.UpdateScroll(dScroll, total, DROWS, DROW_H)
 
     for i = 1, DROWS do
         local row = dRows[i]
@@ -121,7 +120,7 @@ local function makePlayerRow(parent, i)
 
     -- top-right: action button (Invite for solo LFG, Whisper for group LFM) + age
     r.act = _G.CreateFrame("Button", nil, r, "UIPanelButtonTemplate")
-    r.act:SetWidth(56); r.act:SetHeight(18); r.act:SetPoint("RIGHT", r, "RIGHT", 0, 0)
+    r.act:SetWidth(66); r.act:SetHeight(18); r.act:SetPoint("RIGHT", r, "RIGHT", 0, 0)
     r.act:SetText("Inv")
 
     r.age = r:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
@@ -179,8 +178,7 @@ function A.UI_Refresh()
     local list  = A.GetSortedEntries(filterBox and filterBox:GetText() or nil)
     local total = A.tlen(list)
 
-    _G.FauxScrollFrame_Update(pScroll, total, PROWS, PROW_H)
-    local offset = _G.FauxScrollFrame_GetOffset(pScroll)
+    local offset = A.UpdateScroll(pScroll, total, PROWS, PROW_H)
 
     for i = 1, PROWS do
         local r = pRows[i]
@@ -249,6 +247,67 @@ function A.UI_Refresh()
         end
     end
     A._busyP = false
+end
+
+-- ---------------------------------------------------------------------------
+-- Manual faux-scroll. Works identically on 1.12 and 1.14 -- does NOT rely on
+-- FauxScrollFrame_OnVerticalScroll (whose argument order differs by client) or
+-- on the template's OnVerticalScroll firing. We own the offset (scroll.rowOffset)
+-- and drive it from the mouse wheel and the scrollbar's OnValueChanged.
+-- ---------------------------------------------------------------------------
+local function scrollBarOf(scroll)
+    return _G[scroll:GetName() .. "ScrollBar"]
+end
+
+-- Sync the scrollbar to the current offset and return the clamped offset.
+function A.UpdateScroll(scroll, total, visible, itemH)
+    local maxOff = total - visible
+    if maxOff < 0 then maxOff = 0 end
+    scroll.maxOff = maxOff
+    local off = scroll.rowOffset or 0
+    if off > maxOff then off = maxOff end
+    if off < 0 then off = 0 end
+    scroll.rowOffset = off
+
+    local sb = scrollBarOf(scroll)
+    if sb then
+        scroll._syncing = true
+        sb:SetMinMaxValues(0, maxOff * itemH)
+        sb:SetValueStep(itemH)
+        sb:SetValue(off * itemH)
+        scroll._syncing = false
+        if maxOff <= 0 then sb:Hide() else sb:Show() end
+    end
+    return off
+end
+
+-- Wire mouse wheel + scrollbar for a scroll frame. refresh() redraws the list.
+function A.SetupScroll(scroll, itemH, refresh)
+    scroll.rowOffset = 0
+    scroll:EnableMouseWheel(true)
+    scroll:SetScript("OnMouseWheel", function(self, delta)
+        local d = delta or _G.arg1 or 0
+        local off = (scroll.rowOffset or 0) - d          -- wheel up (+1) scrolls up
+        local maxOff = scroll.maxOff or 0
+        if off > maxOff then off = maxOff end
+        if off < 0 then off = 0 end
+        if off ~= scroll.rowOffset then
+            scroll.rowOffset = off
+            refresh()
+        end
+    end)
+    local sb = scrollBarOf(scroll)
+    if sb then
+        sb:SetScript("OnValueChanged", function(self, value)
+            if scroll._syncing then return end
+            local v = value or _G.arg1 or 0
+            local off = math.floor((v / itemH) + 0.5)
+            if off ~= (scroll.rowOffset or 0) then
+                scroll.rowOffset = off
+                refresh()
+            end
+        end)
+    end
 end
 
 -- ---------------------------------------------------------------------------
@@ -324,11 +383,7 @@ local function build()
     dScroll = _G.CreateFrame("ScrollFrame", "OpenLFGDScroll", frame, "FauxScrollFrameTemplate")
     dScroll:SetPoint("TOPLEFT", frame, "TOPLEFT", 12, -96)
     dScroll:SetWidth(LEFT_W - 30); dScroll:SetHeight(DROWS * DROW_H)
-    dScroll:SetScript("OnVerticalScroll", function()
-        -- Bypass FauxScrollFrame_OnVerticalScroll (its arg order differs between
-        -- clients). The scrollbar value is already current; just re-render.
-        A.UI_RefreshDungeons()
-    end)
+    A.SetupScroll(dScroll, DROW_H, A.UI_RefreshDungeons)
     dRows = {}
     for i = 1, DROWS do dRows[i] = makeDungeonRow(frame, i) end
 
@@ -396,9 +451,7 @@ local function build()
     pScroll = _G.CreateFrame("ScrollFrame", "OpenLFGPScroll", frame, "FauxScrollFrameTemplate")
     pScroll:SetPoint("TOPLEFT", frame, "TOPLEFT", LEFT_W + 12, -88)
     pScroll:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, 36)
-    pScroll:SetScript("OnVerticalScroll", function()
-        A.UI_Refresh()
-    end)
+    A.SetupScroll(pScroll, PROW_H, A.UI_Refresh)
     pRows = {}
     for i = 1, PROWS do pRows[i] = makePlayerRow(frame, i) end
 
